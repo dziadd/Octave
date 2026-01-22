@@ -1,0 +1,123 @@
+pkg load image;
+clear; clc; close all;
+
+function output_img = moj_filtr(input_img, maska)
+  [rows, cols, channels] = size(input_img);
+  [m_rows, m_cols] = size(maska);
+
+  pad_h = floor(m_rows / 2);
+  pad_w = floor(m_cols / 2);
+
+  output_img = zeros(rows, cols, channels);
+  input_d = double(input_img);
+
+  for k = 1:channels
+    warstwa = input_d(:, :, k);
+    padded = zeros(rows + 2*pad_h, cols + 2*pad_w);
+    padded(pad_h+1 : end-pad_h, pad_w+1 : end-pad_w) = warstwa;
+
+    warstwa_out = zeros(rows,cols);
+
+    for mi = 1:m_rows
+      for mj = 1:m_cols
+        waga = maska(mi,mj);
+        if waga ~= 0
+          r_start = mi;
+          r_end = mi + rows - 1;
+          c_start = mj;
+          c_end = mj + cols - 1;
+          warstwa_out = warstwa_out + padded(r_start:r_end, c_start:c_end) * waga;
+
+        endif
+      endfor
+    endfor
+    output_img(:, :, k) = warstwa_out;
+  endfor
+endfunction
+
+function out = przytnij(in)
+  out = max(0, min(255, in));
+endfunction
+
+%funkcja do konwersji skali szarosci przez srednia arytmetyczna
+function gray = na_szarosc_srednia(img)
+  img = double(img);
+  %średnia z rgb
+  gray = sum(img, 3) /3;
+endfunction
+
+
+nazwa_pliku = 'rzeczka.jpg';
+try
+  img_org = imread(nazwa_pliku);
+catch
+  error('Nie znaleziono pliku');
+end
+
+%zad1 zadanie realizowane przez moj_filtr
+figure(1); imshow(img_org); title('Oryginal');
+
+%zad2 rozmycie
+maska_blur = [5 6 5;6 6 6;5 6 5];
+suma_maski = sum(maska_blur(:));
+maska_blur = maska_blur / suma_maski;
+img_z2 = moj_filtr(img_org, maska_blur);
+img_z2 = uint8(przytnij(img_z2));
+figure(2); imshow(img_z2); title('Zad 2: Rozmycie');
+
+%zad3 wyostrzenie
+maska_sharp = [0 -1 0;-1 5 -1;0 -1 0];
+img_z3 = moj_filtr(img_org, maska_sharp);
+img_z3 = uint8(przytnij(img_z3));
+figure(3); imshow(img_z3); title('Zad 3: Wyostrzenie');
+
+%zad4 wyszarzenie
+maska_pion = [0 0 0;-1 0 1;0 0 0];
+img_gray = na_szarosc_srednia(img_org);
+img_z4 = moj_filtr(img_gray, maska_pion);
+img_z4 = abs(img_z4); %moduł z wartoś
+img_z4 = uint8(przytnij(img_z4));
+figure(4); imshow(img_z4); title('Zad 4: Wyszarzenie');
+
+%zad5
+maska_sobel_poz = [-1 -2 -1; 0 0 0; 1 2 1];
+img_z5 = moj_filtr(img_org, maska_sobel_poz);
+img_z5 = abs(img_z5);
+img_z5 = uint8(przytnij(img_z5));
+figure(5); imshow(img_z5); title('Zad 5: Sobel Poziom (Kolor)');
+
+%zad6
+img_gray_z6 = na_szarosc_srednia(img_org);
+maska_z6_pion = [0 -1 0;0 0 0;0 1 0];
+maska_z6_poz = [0 0 0; 1 0 -1;0 0 0];
+obr1 = abs(moj_filtr(img_gray_z6, maska_z6_pion));
+obr2 = abs(moj_filtr(img_gray_z6, maska_z6_poz));
+img_z6 = max(obr1, obr2);
+img_z6 = uint8(przytnij(img_z6));
+figure(6); imshow(img_z6); title('Zad 6: max(pion,poz)');
+
+%zad7 efekt emboss
+img_gray_z7 = na_szarosc_srednia(img_org);
+maska_emboss = [-1 -1 0;-1 0 1;0 1 1];
+img_z7 = moj_filtr(img_gray_z7, maska_emboss);
+img_z7 = img_z7 + 127.5; %przesuniecie o szarosc
+img_z7 = uint8(przytnij(img_z7));
+figure(7); imshow(img_z7); title('Zad 7: Emboss');
+
+%zad 8 operatory frei-chen
+img_gray_z8 = na_szarosc_srednia(img_org);
+sq2 = sqrt(2);
+
+maska_fc1 = [-1 -sq2 -1;0 0 0;1 sq2 1];
+maska_fc2 = [-1 0 1; -sq2 0 sq2;-1 0 1];
+
+wy1 = moj_filtr(img_gray_z8, maska_fc1);
+wy2 = moj_filtr(img_gray_z8, maska_fc2);
+
+img_z8 = sqrt(wy1.^2 + wy2.^2);
+img_z8 = uint8(przytnij(img_z8));
+figure(8); imshow(img_z8); title('Zad 8: Frei-chen');
+
+
+
+
