@@ -1,0 +1,149 @@
+pkg load image;
+clear; clc; close all;
+
+% --- CZĘŚĆ GŁÓWNA SKRYPTU ---
+
+% Definicja nazw plików (zgodnie z instrukcją [cite: 142])
+file_rzeczka = 'rzeczka.jpg';
+file_rzeczka_mala = 'rzeczka_mniejsza.jpg'; % Jeśli nie masz, użyj 'rzeczka.jpg'
+file_logo = 'logo_linuxa.png';
+file_zrzut = 'zrzut_1.png';
+
+% Sprawdzenie dostępności plików (dla wygody)
+if ~exist(file_rzeczka, 'file'), warning(['Brak pliku: ' file_rzeczka]); end
+
+% --- ZADANIE 1: Rzeczka -> 333x222  ---
+try
+    img = imread(file_rzeczka);
+    nowa_szer = 333;
+    nowa_wys = 222;
+
+    img_z1 = skaluj_najblizszy_sasiad(img, nowa_szer, nowa_wys);
+
+    figure(1);
+    imshow(img_z1);
+    title(['Zad 1: Rzeczka ' num2str(nowa_szer) 'x' num2str(nowa_wys)]);
+    % imwrite(img_z1, 'wynik_zad1.jpg'); % Opcjonalny zapis [cite: 181]
+catch
+    disp('Pominięto Zadanie 1 (brak pliku).');
+end
+
+% --- ZADANIE 2: Rzeczka mniejsza -> 1366x768 [cite: 233-234] ---
+try
+    img = imread(file_rzeczka_mala);
+    nowa_szer = 1366;
+    nowa_wys = 768;
+
+    img_z2 = skaluj_najblizszy_sasiad(img, nowa_szer, nowa_wys);
+
+    figure(2);
+    imshow(img_z2);
+    title(['Zad 2: Rzeczka mniejsza -> ' num2str(nowa_szer) 'x' num2str(nowa_wys)]);
+catch
+    disp('Pominięto Zadanie 2 (brak pliku).');
+end
+
+% --- ZADANIE 3: Logo Linuxa -> ~10x (672x788) [cite: 235] ---
+try
+    img = imread(file_logo);
+    nowa_szer = 672;
+    nowa_wys = 788;
+
+    img_z3 = skaluj_najblizszy_sasiad(img, nowa_szer, nowa_wys);
+
+    figure(3);
+    imshow(img_z3);
+    title('Zad 3: Logo Linuxa powiększone');
+catch
+    disp('Pominięto Zadanie 3 (brak pliku).');
+end
+
+% --- ZADANIE 4: Zrzut_1 -> 1.5x (900x432) [cite: 236] ---
+try
+    img_zrzut = imread(file_zrzut);
+    nowa_szer = 900;
+    nowa_wys = 432;
+
+    img_z4 = skaluj_najblizszy_sasiad(img_zrzut, nowa_szer, nowa_wys);
+
+    figure(4);
+    imshow(img_z4);
+    title('Zad 4: Zrzut powiększony 1.5x');
+catch
+    disp('Pominięto Zadanie 4 (brak pliku).');
+end
+
+% --- ZADANIE 5: Zrzut_1 -> 0.75x (600x246) [cite: 275-276] ---
+try
+    % Korzystamy z wczytanego wcześniej img_zrzut
+    if exist('img_zrzut', 'var')
+        nowa_szer = 600;
+        nowa_wys = 246;
+
+        img_z5 = skaluj_najblizszy_sasiad(img_zrzut, nowa_szer, nowa_wys);
+
+        figure(5);
+        imshow(img_z5);
+        title('Zad 5: Zrzut pomniejszony 0.75x');
+    end
+catch
+    disp('Pominięto Zadanie 5.');
+end
+
+% --- ZADANIE 6: Zrzut_1 -> 400x400 -> Oryginał  ---
+try
+    if exist('img_zrzut', 'var')
+        [orig_wys, orig_szer, ~] = size(img_zrzut);
+
+        % Krok 1: Skalowanie do 400x400 (deformacja)
+        img_temp = skaluj_najblizszy_sasiad(img_zrzut, 400, 400);
+
+        % Krok 2: Powrót do oryginału
+        img_z6 = skaluj_najblizszy_sasiad(img_temp, orig_szer, orig_wys);
+
+        figure(6);
+        subplot(1,2,1); imshow(img_temp); title('Zad 6: 400x400');
+        subplot(1,2,2); imshow(img_z6); title('Zad 6: Powrót do oryginału');
+    end
+catch
+    disp('Pominięto Zadanie 6.');
+end
+
+
+% --- FUNKCJE POMOCNICZE ---
+
+function out_img = skaluj_najblizszy_sasiad(img, s_wy, w_wy)
+    % Implementacja algorytmu "najbliższego sąsiada"
+    % s_wy, w_wy - szerokość i wysokość wyjściowa [cite: 227]
+
+    [w_we, s_we, channels] = size(img); % Pobranie wymiarów wejściowych
+
+    % Zabezpieczenie dla obrazów o wymiarze 1x1 lub błędnych danych
+    if s_wy < 2 || w_wy < 2 || s_we < 2 || w_we < 2
+        out_img = imresize(img, [w_wy, s_wy], 'nearest'); % Fallback
+        return;
+    end
+
+    % Optymalizacja: Tworzenie wektorów translacji zamiast pętli [cite: 231]
+
+    % Wektory indeksów wyjściowych (od 1 do szerokości/wysokości)
+    vec_x_wy = 1:s_wy;
+    vec_y_wy = 1:w_wy;
+
+    % Obliczenie indeksów wejściowych wg wzoru z PDF
+    % Wzór: x_we = round(1 + (x_wy - 1) * (s_we - 1) / (s_wy - 1))
+
+    scale_x = (s_we - 1) / (s_wy - 1);
+    scale_y = (w_we - 1) / (w_wy - 1);
+
+    indices_x = round(1 + (vec_x_wy - 1) * scale_x);
+    indices_y = round(1 + (vec_y_wy - 1) * scale_y);
+
+    % Zabezpieczenie przed wyjściem poza zakres (błędy zaokrągleń float)
+    indices_x = max(1, min(s_we, indices_x));
+    indices_y = max(1, min(w_we, indices_y));
+
+    % Wykorzystanie indeksowania macierzowego do stworzenia obrazu
+    % To zastępuje wolne pętle for
+    out_img = img(indices_y, indices_x, :);
+end
