@@ -1,0 +1,106 @@
+clear; clc; close all;
+
+dane = csvread('punktman.csv');
+x = dane(:, 1);
+y = dane(:, 2);
+
+%konwersja na wpolrzedne jednorodne (macierz 3xN)
+p_stare = [x'; y'; ones(1,length(x))];
+
+get_scale_mtx = @(sx, sy) [sx 0 0; 0 sy 0; 0 0 1]; %macierz skalowania
+
+get_trans_mtx = @(tx, ty) [1 0 tx; 0 1 ty; 0 0 1]; %macierz translacji
+
+get_rot_mtx = @(deg)[cos(deg2rad(deg)) -sin(deg2rad(deg)) 0;
+              sin(deg2rad(deg)) cos(deg2rad(deg)) 0;
+              0 0 1];
+
+%zad 1: skalowanie o 0,1, 0,2
+figure('Name','zad1');
+sx = 0.1;
+sy = 0.2;
+
+m_skalowania = get_scale_mtx(sx, sy);
+p_nowe = m_skalowania * p_stare;
+
+plot(p_nowe(1, :), p_nowe(2, :), 'sk');
+title('zadanie 1 skalowanie sx=0,1 sy=0,2');
+axis equal; grid on;
+
+
+%zad2: srodek ciezkosci
+figure('Name', 'zad2');
+srodek_x = mean(x);
+srodek_y = mean(y);
+
+tx = -srodek_x;
+ty = -srodek_y;
+
+m_centrowania = get_trans_mtx(tx, ty);
+p_centrowane = m_centrowania * p_stare;
+
+plot(p_centrowane(1, :), p_centrowane(2, :), 'sk');
+title('zad2 przesuniecie srodka do (0,0)');
+axis equal; grid on;
+
+%zad3: obrot o -60 stopni
+figure('Name','zad3');
+kat = -60;
+m_obrotu = get_rot_mtx(kat);
+p_obrocone = m_obrotu * p_stare;
+
+plot(p_obrocone(1, :), p_obrocone(2, :), 'sk');
+title('zad3 obrot o -60 stopni');
+axis equal; grid on;
+
+%zad4: zlozenie
+figure('Name','zad4');
+
+step1_trans = get_trans_mtx(tx, ty); %przesuniecie do srodka (uzywamy obliczonego wczesniej tx,ty)
+
+step2_rot = get_rot_mtx(90); %obrot o 90 stopni przeciwnie do wskazowek zegara
+
+step3_scale = get_scale_mtx(0.01, 0.01); %zmniejszenie 100-krotne (skala 0.01)
+
+m_calkowita = step3_scale * step2_rot * step1_trans; %mnozenie macierzy w kolejnosci odwrotnej do wykonywania dzialan
+
+disp('Macierz calkowita dla zadania 4:');
+disp(m_calkowita);
+
+p_zlozone = m_calkowita * p_stare;
+
+plot(p_zlozone(1, :), p_zlozone(2, :), 'sk');
+title('zad4: transformacja zlozona');
+axis equal; grid on;
+
+%zad5 : oryginal + lustrzane odbicie
+figure('Name', 'zad5 lustro');
+min_x = min(x);
+min_y = min(y);
+m_odsuniecie = get_trans_mtx(-min_x, -min_y);
+p_baza = m_odsuniecie * p_stare;
+
+m_lustro = get_scale_mtx(1, -0.5);
+
+p_kopia = m_lustro * p_baza;
+
+plot(p_baza(1,:), p_baza(2,:),'sk');
+hold on;
+plot(p_kopia(1,:), p_kopia(2,:),'sr');
+title('zad5: czarny oryginal + lustrzane odbicie(czerwony)');
+axis equal; grid on;
+hold off;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
