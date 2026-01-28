@@ -1,0 +1,110 @@
+img = imread('plaza1.png');
+
+R = img(:,:, 1);
+G = img(:,:, 2);
+B = img(:,:, 3);
+
+img_rb = cat(3,B,G,R); %zad1 cat wymiar, niebieski, zielony, czerwony
+imshow(img_rb);%zmiena koloru czerwonego z niebieskim
+
+imgd = double(imread('plaza1.png'));%zad2 histogram wszystkich wartosci rgb razem
+figure;
+subplot(2,2,1);
+hist(double(imgd(:)),100);
+title('R+G+B');
+grid on;
+
+subplot(2,2,2);
+R = imgd(:,:,1);
+hist(double(R(:)),100);
+title('R');
+grid on;
+
+
+subplot(2,2,3);
+G = imgd(:,:,2);
+hist(double(G(:)),100);
+title('G');
+grid on;
+
+subplot(2,2,4);
+B = imgd(:,:,3);
+hist(double(B(:)),100);
+title('B');
+grid on;
+
+
+we_min = min(imgd(:)); %zad 3rozciagniecie histogramu globalnie ( automatycznie przeskalowacnie wszystkich wartosci do przedzialu 0:255)
+we_max = max(imgd(:));
+
+img_nowy = (imgd - we_min) / (we_max - we_min) * 255;
+
+figure();
+subplot(1,2,1); imshow(uint8(imgd)); title('oryginalny');
+subplot(1,2,2); imshow(uint8(img_nowy)); title('zmieniony');
+
+
+[wys,szer,ch] = size(imgd); %zad 4r kazdy kolor osobno ( automatycznie przeskalowacnie wszystkich wartosci do przedzialu 0:255)
+img_zm = zeros(wys,szer,ch);
+for i = 1:3
+  warstwa = imgd(:,:,i);
+  we_min = min(warstwa(:));
+  we_max = max(warstwa(:));
+  img_zm(:,:,i) = (warstwa - we_min) / (we_max - we_min) * 255;
+endfor
+
+img_zm = uint8(img_zm);
+img_org = uint8(imgd);
+
+figure;
+subplot(2,2,1);
+hist(double(img_zm(:)), 100);
+title('R+G+B zmieniony'); grid on;
+
+subplot(2,2,2);
+hist(double(img_zm(:,:,1)(:)), 100);
+title('R zmieniony'); grid on;
+
+subplot(2,2,3);
+hist(double(img_zm(:,:,2)(:)), 100);
+title('G zmieniony'); grid on;
+
+subplot(2,2,4);
+hist(double(img_zm(:,:,3)(:)), 100);
+title('B zmieniony'); grid on;
+
+figure();
+subplot(1,2,1); imshow(uint8(imgd)); title('oryginalny');
+subplot(1,2,2); imshow(uint8(img_zm)); title('zmieniony');
+
+
+
+%zad 5rozciagniecie histogramu globalnie z usuwaniem ogona
+wektor_v = sort(imgd(:));
+N = length(wektor_v);
+
+idx_min = round(0.10*N);
+idx_max = round(0.90*N);
+
+we_min_prim = wektor_v(idx_min);
+we_max_prim = wektor_v(idx_max);
+
+img_zmieniony = (imgd - we_min_prim) / (we_max_prim - we_min_prim) * 255;
+img_zmieniony(img_zmieniony < 0) = 0;
+img_zmieniony(img_zmieniony > 255) = 255;
+
+img_final = uint8(img_zmieniony);
+
+figure();
+subplot(1, 2, 1); imshow(img); title('org');
+subplot(1, 2, 2); imshow(img_final); title('zmieniony');
+
+figure;
+subplot(2,2,1); hist(double(img_final(:)), 100); title('R+G+B'); grid on;
+subplot(2,2,2); hist(double(img_final(:,:,1)(:)), 100); title('R'); grid on;
+subplot(2,2,3); hist(double(img_final(:,:,2)(:)), 100); title('G'); grid on;
+subplot(2,2,4); hist(double(img_final(:,:,3)(:)), 100); title('B'); grid on;
+
+
+
+
