@@ -1,0 +1,88 @@
+%zad 1 gamma
+clear;clc;close all;
+img = imread('rzeczka.jpg');
+img_d = double(img); %zakres 0:255
+
+
+%wzor z pdf: wyjscie = wejscie^(1/gamma)
+% Należy przeskalować wartości do zakresu [0; 1]
+gamma = 1.5;
+img_gamma_norm = (img_d / 255) .^ (1/gamma);
+img_gamma = img_gamma_norm * 255; %powrot do zakresu [0;255]
+
+%funkcja przytnijzakres dla zakresu [0:255]
+przytnij = @(x) max(0, min(255,x));
+
+%Porównanie v.PS z mnożnikiem (mnożnik = 4)
+%wyjscie = PrzytnijZakres(mnoznik * |wenowe - westare|)
+mnoznik_ps = 4;
+img_vPS = przytnij(mnoznik_ps * abs(img_gamma - img_d));
+
+%Porównanie v.2 z mnożnikiem (mnożnik = 3)
+%wyjscie = PrzytnijZakres(mnoznik * (wenowe - westare) + wartośćŚrodkowa)
+mnoznik_v2 = 3;
+wartoscSrodkowa = 127.5; % Dla zakresu [0; 255]
+img_v2 = przytnij(mnoznik_v2 * (img_gamma - img_d) + wartoscSrodkowa);
+
+figure;
+subplot(2,2,1);imshow(uint8(img));title('org');
+subplot(2,2,2);imshow(uint8(img_gamma));title('korekcja gamma 1.5');
+subplot(2,2,3);imshow(uint8(img_vPS));title('v.Ps * 4');
+subplot(2,2,4);imshow(uint8(img_v2));title('v.2 * 3');
+
+
+%zad2 szarosc
+R = img_d(:,:,1);
+G = img_d(:,:,2);
+B = img_d(:,:,3);
+
+%szarosc srednia arytmetyczna z RGB
+szarosc_srednia = (R+G+B) / 3;
+
+%szarosc suma iloczynow z wagami wzor: 0.2126*R + 0.7152*G + 0.0722*B (w pdf)
+szarosc_szary = 0.2126 * R + 0.7152 * G + 0.0722 * B;
+
+
+%porownanie v.PS z mnoznikiem 4
+%wzor: mnoznik * |nowe - stare|
+mnoznik_ps = 4;
+diff_ps = abs(szarosc_szary - szarosc_srednia);
+img_vPS = przytnij(mnoznik_ps * diff_ps);
+
+%porownanie v.2 z mnoznikiem 3
+% Wzór: mnoznik * (nowe - stare) + wartośćŚrodkowa
+mnoznik_v2 = 3;
+wartoscSrodkowa = 127.5;
+diff_v2 = (szarosc_szary - szarosc_srednia);
+img_v2 = przytnij(mnoznik_v2 * diff_v2 + wartoscSrodkowa);
+
+figure;
+% 1. Szary(SzarośćSzary)
+subplot(2,2,1);
+imshow(uint8(szarosc_szary));
+title('Szary');
+
+% 2.Średnia(SzarośćŚrednia)
+subplot(2,2,2);
+imshow(uint8(szarosc_srednia));
+title('Srednia');
+
+%3. Porównanie v.PS * 4
+subplot(2,2,3);
+imshow(uint8(img_vPS));
+title('porownanie v.PS * 4');
+
+% 4. Porównanie v.2 * 3
+subplot(2,2,4);
+imshow(uint8(img_v2));
+title('porownanie v.2 * 3');
+
+
+
+
+
+
+
+
+
+
