@@ -1,0 +1,59 @@
+
+%Zadanie 4. Proszę stworzyć LUT, taką, aby dla wszystkich wartości wejściowych mniejszych niż średnia wartość z całego obrazka zmienić je na
+%10, a wartości większe niż średnia płynnie zmieniały się one aż do 235 (zgodnie z podanym przykładem).
+%Tabela (wektor nietransponowany - poziomy) LUT ma być w formacie wyjście = LUT[wejście+1] (takie jak na ćwiczeniach)
+%i zmienna ta ma się dokładnie nazywać LUT.
+
+img = imread('rzeczka.jpg');
+
+srednia = mean(img(:));
+
+wejscie = 0:255;
+LUT = zeros(1,256);
+
+LUT(wejscie <= srednia) = 10;
+
+indeksy_wieksze = wejscie > srednia;
+procent_zakresu = (wejscie(indeksy_wieksze) - srednia) / (255 - srednia);
+LUT(indeksy_wieksze) = 10 + procent_zakresu * (235 - 10);
+
+
+%zad 5 zastosowanie i pokazanie obrazka z tym LUTEM
+obraz_wynikowy = LUT(uint8(img) + 1);
+imshow(uint8(obraz_wynikowy));
+
+%zad6 Konwersja z RGB na KLM, dokonanie obrobki nastepnie przejscie z powrotem na RGB. Nalezy napisac funkcje ktora dokona tych przeksztalcen
+%przy czym narzucona jest postac parametrow wejsciowych i wyjsciowych tej funkcji (tablela KLM)
+
+function [Rn, Gn, Bn] = kol_zad_6(R, G, B)
+  %konwersja z RGB na KLM (TABELA)
+  K = 0.25 * R + 0.5 * G + 0.25 * B;
+  L = 0.5 * R - 0.5 * B;
+  M = -0.25 * R + 0.5 * G - 0.25 * B;
+
+  %obrobka kanalu k
+  %jezeli L > 128, K przyjmuje nowa wartosc w przeciwnym razie zostaje bez zmian
+  Kn = K;
+  indeksy = L > 128;
+  Kn(indeksy) = 103 + 0.2 * K(indeksy);
+
+  Rn = Kn + L - M;
+  Gn = Kn + M;
+  Bn = Kn - L - M;
+endfunction
+
+clear;
+img_org = double(imread('rzeczka.jpg'));
+
+r_vec = img_org(:,:,1);
+g_vec = img_org(:,:,2);
+b_vec = img_org(:,:,3);
+
+[rn, gn, bn] = kol_zad_6(r_vec(:), g_vec(:), b_vec(:));
+img_wynik = reshape([rn; gn; bn], size(img_org));
+imshow(img_wynik / 255);
+title('Obraz po transformacji klm');
+
+
+
+
