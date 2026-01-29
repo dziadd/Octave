@@ -1,0 +1,527 @@
+clear; clc; close all;
+
+% Wczytanie obrazka
+img = imread('rzeczka.jpg');
+% Konwersja na double i przeskalowanie do zakresu [0, 1]
+img_d = double(img) / 255;
+
+R = img_d(:,:,1);
+G = img_d(:,:,2);
+B = img_d(:,:,3);
+
+% --- KROK 1: Obliczenie wartości pomocniczych (Max, Min, Chroma) ---
+% Obliczamy MaxRGB i MinRGB wzdłuż 3. wymiaru (czyli spośród R, G, B dla każdego piksela)
+MaxRGB = max(img_d, [], 3);
+MinRGB = min(img_d, [], 3);
+
+Chroma = MaxRGB - MinRGB;
+
+% --- KROK 2: Obliczenie Lightness (L) ---
+% Wzór: L = (MaxRGB + MinRGB) / 2
+L = (MaxRGB + MinRGB) / 2;
+
+% --- KROK 3: Obliczenie Saturation (S) ---
+% Wzór: S = Chroma / (1 - |2*L - 1|)
+% Warunek: jeśli L bliskie 0 lub 1, S = 0
+
+S = zeros(size(L)); % Inicjalizacja zerami
+% Maska pikseli, dla których liczymy S ze wzoru (pomijamy skrajnie jasne/ciemne)
+mask_S = (L > 0.001) & (L < 0.999);
+
+% Obliczenie S tylko tam, gdzie maska jest prawdziwa.
+% W miejscu gdzie Chroma=0 i tak wyjdzie 0 (chyba że mianownik też 0, ale maska L chroni przed mianownikiem=0)
+% Dla bezpieczeństwa można dodać eps do mianownika lub obsłużyć Chroma=0.
+% Ale wg instrukcji warunkiem jest L.
+mianownik = 1 - abs(2 * L(mask_S) - 1);
+S(mask_S) = Chroma(mask_S) ./ (mianownik + eps); % dodaje eps by uniknac dzielenia przez 0
+
+% Dodatkowe zabezpieczenie: jeśli Chroma=0 to S powinno być 0 (szarość).
+S(Chroma <= 0.001) = 0;
+
+
+% --- KROK 4: Obliczenie Hue (H) ---
+H_temp = zeros(size(L));
+
+% Maska dla Chroma > 0.001 (tam gdzie ma sens liczyć barwę)
+mask_C = Chroma > 0.001;
+
+% Przypadek 1: R jest maksimum
+mask_R = (R == MaxRGB) & mask_C;
+% Wzór: (G - B) / Chroma mod 6
+% Używamy mod(..., 6) aby obsłużyć ujemne wyniki (np. gdy B > G)
+H_temp(mask_R) = mod((G(mask_R) - B(mask_R)) ./ Chroma(mask_R), 6);
+
+% Przypadek 2: G jest maksimum
+mask_G = (G == MaxRGB) & mask_C;
+% Wzór: (B - R) / Chroma + 2
+H_temp(mask_G) = ((B(mask_G) - R(mask_G)) ./ Chroma(mask_G)) + 2;
+
+% Przypadek 3: B jest maksimum
+mask_B = (B == MaxRGB) & mask_C;
+% Wzór: (R - G) / Chroma + 4
+H_temp(mask_B) = ((R(mask_B) - G(mask_B)) ./ Chroma(mask_B)) + 4;
+
+% Ostateczne H: H_temp * 60
+H = H_temp * 60;
+
+% --- Wyświetlanie ---
+figure('Name', 'Zadanie 1: Przestrzen HSL');
+
+% 1. Oryginał
+subplot(2,2,1);
+imshow(img);
+title('Oryginal RGB');
+
+% 2. Hue (dzielimy przez 360 aby wyświetlić w zakresie 0-1)
+subplot(2,2,2);
+imshow(H / 360);
+title('Hue (H) / 360');
+
+% 3. Saturation
+subplot(2,2,3);
+imshow(S);
+title('Saturation (S)');
+
+% 4. Lightness
+subplot(2,2,4);
+imshow(L);
+title('Lightness (L)');
+
+% --- ZADANIE 2: HSL -> RGB i analiza błędów ---
+
+% 1. Obliczenie Chroma (C)
+% Wzór: Chroma = (1 - |2*L - 1|) * S   [cite: 131]
+Chroma = (1 - abs(2 * L - 1)) .* S;
+
+% 2. Obliczenie wartości tymczasowej X
+% Wzór: X = Chroma * (1 - |modulo(H/60, 2) - 1|)   [cite: 132]
+H_norm = H / 60;
+X = Chroma .* (1 - abs(mod(H_norm, 2) - 1));
+
+% 3. Obliczenie składowych R', G', B' zależnie od kąta Hue (H)
+% Tabela przypadków [cite: 136]
+
+R_prim = zeros(size(H));
+G_prim = zeros(size(H));
+B_prim = zeros(size(H));
+
+% Przypadek 0 <= H <= 60: (C, X, 0)
+mask = (H >= 0) & (H <= 60);
+R_prim(mask) = Chroma(mask);
+G_prim(mask) = X(mask);
+
+% Przypadek 60 < H <= 120: (X, C, 0)
+mask = (H > 60) & (H <= 120);
+R_prim(mask) = X(mask);
+G_prim(mask) = Chroma(mask);
+
+% Przypadek 120 < H <= 180: (0, C, X)
+mask = (H > 120) & (H <= 180);
+G_prim(mask) = Chroma(mask);
+B_prim(mask) = X(mask);
+
+% Przypadek 180 < H <= 240: (0, X, C)
+mask = (H > 180) & (H <= 240);
+G_prim(mask) = X(mask);
+B_prim(mask) = Chroma(mask);
+
+% Przypadek 240 < H <= 300: (X, 0, C)
+mask = (H > 240) & (H <= 300);
+R_prim(mask) = X(mask);
+B_prim(mask) = Chroma(mask);
+
+% Przypadek 300 < H <= 360: (C, 0, X)
+mask = (H > 300) & (H <= 360);
+R_prim(mask) = Chroma(mask);
+B_prim(mask) = X(mask);
+
+% 4. Obliczenie wartości MinRGB (m) i finalnych R, G, B
+% Wzór: MinRGB = L - Chroma / 2   [cite: 133, 134]
+m = L - Chroma / 2;
+
+% Wzory końcowe: R = R' + m, itd. [cite: 137]
+R_new = R_prim + m;
+G_new = G_prim + m;
+B_new = B_prim + m;
+
+% Składamy obrazek w całość
+img_new = zeros(size(img_d));
+img_new(:,:,1) = R_new;
+img_new(:,:,2) = G_new;
+img_new(:,:,3) = B_new;
+
+% --- KROK 5: Porównanie i wyświetlanie ---
+
+roznica = img_new - img_d; % img_d to oryginał double [0,1] z Zadania 1
+max_err = max(abs(roznica(:)));
+
+fprintf('Maksymalny błąd konwersji HSL->RGB: %e\n', max_err);
+% Instrukcja mówi, że błąd powinien być około 5e-14
+
+% Funkcja przycinająca (pomocnicza)
+przytnij = @(x) max(0, min(1, x)); % Tu zakres [0, 1] bo działamy na double
+
+% Porównanie v.PS * 1 000 000 [cite: 141]
+mnoznik_ps = 1000000;
+img_vPS = przytnij(mnoznik_ps * abs(roznica));
+
+% Porównanie v.2 * 10 000 000 [cite: 142]
+% Uwaga: Instrukcja podaje tu mnożnik aż 10 milionów
+mnoznik_v2 = 10000000;
+wartoscSrodkowa = 0.5; % Dla zakresu [0, 1] środek to 0.5 [cite: 9]
+img_v2 = przytnij(mnoznik_v2 * roznica + wartoscSrodkowa);
+
+figure('Name', 'Zadanie 2: Konwersja odwrotna HSL->RGB');
+
+% 1. Oryginał
+subplot(2,2,1);
+imshow(img_d);
+title('Oryginal');
+
+% 2. Obraz po konwersji
+subplot(2,2,2);
+imshow(img_new);
+title('Po konwersji HSL -> RGB');
+
+% 3. Różnica v.PS
+subplot(2,2,3);
+imshow(img_vPS);
+title('v.PS * 1 000 000');
+
+% 4. Różnica v.2
+subplot(2,2,4);
+imshow(img_v2);
+title('v.2 * 10 000 000');
+
+% --- ZADANIE 3: Przesunięcie Hue o -50 ---
+
+% 1. Modyfikacja składowej Hue
+% "odjąć od składnika Hue (barwa) 50"
+H_new = H - 50;
+
+% 2. Korekcja zakresu [0, 360)
+% "wartości mniejsze niż 0 powinny być powiększone o 360"
+% Wykorzystujemy maskę logiczną dla optymalizacji (bez pętli)
+mask_ujemne = H_new < 0;
+H_new(mask_ujemne) = H_new(mask_ujemne) + 360;
+
+% Alternatywnie można użyć funkcji modulo: H_new = mod(H - 50, 360);
+
+% 3. Konwersja powrotna HSL -> RGB (przy użyciu H_new)
+
+% A. Obliczenie Chroma (zależy od S i L - te się nie zmieniły)
+Chroma = (1 - abs(2 * L - 1)) .* S;
+
+% B. Obliczenie X (zależy od H_new)
+H_norm = H_new / 60;
+X = Chroma .* (1 - abs(mod(H_norm, 2) - 1));
+
+% C. Wyznaczanie R', G', B' na podstawie nowego Hue
+R_prim = zeros(size(H_new));
+G_prim = zeros(size(H_new));
+B_prim = zeros(size(H_new));
+
+% 0 <= H < 60
+mask = (H_new >= 0) & (H_new <= 60);
+R_prim(mask) = Chroma(mask);
+G_prim(mask) = X(mask);
+
+% 60 <= H < 120
+mask = (H_new > 60) & (H_new <= 120);
+R_prim(mask) = X(mask);
+G_prim(mask) = Chroma(mask);
+
+% 120 <= H < 180
+mask = (H_new > 120) & (H_new <= 180);
+G_prim(mask) = Chroma(mask);
+B_prim(mask) = X(mask);
+
+% 180 <= H < 240
+mask = (H_new > 180) & (H_new <= 240);
+G_prim(mask) = X(mask);
+B_prim(mask) = Chroma(mask);
+
+% 240 <= H < 300
+mask = (H_new > 240) & (H_new <= 300);
+R_prim(mask) = X(mask);
+B_prim(mask) = Chroma(mask);
+
+% 300 <= H < 360
+mask = (H_new > 300) & (H_new <= 360);
+R_prim(mask) = Chroma(mask);
+B_prim(mask) = X(mask);
+
+% D. Dopasowanie jasności (MinRGB)
+m = L - Chroma / 2;
+
+R_final = R_prim + m;
+G_final = G_prim + m;
+B_final = B_prim + m;
+
+% Złożenie obrazu
+img_hue_mod = zeros(size(img_d));
+img_hue_mod(:,:,1) = R_final;
+img_hue_mod(:,:,2) = G_final;
+img_hue_mod(:,:,3) = B_final;
+
+% 4. Wyświetlenie wyników
+figure('Name', 'Zadanie 3: HUE - 50');
+
+% Obraz oryginalny (zmienna img_d z Zadania 1)
+subplot(1,2,1);
+imshow(img_d);
+title('org');
+
+% Obraz po modyfikacji barwy
+subplot(1,2,2);
+% Przycinamy dla bezpieczeństwa (chociaż matematycznie powinno być [0,1])
+przytnij = @(x) max(0, min(1, x));
+imshow(przytnij(img_hue_mod));
+title('HUE - 50');
+
+% --- ZADANIE 4: Gamma 1.5 na nasyceniu (Saturation) ---
+
+% 1. Modyfikacja składnika Saturation
+% Stosujemy korekcję gamma 1.5 (wykładnik 1/1.5)
+gamma = 1.5;
+S_new = S .^ (1/gamma);
+
+% Zabezpieczenie zakresu [0, 1] (na wszelki wypadek)
+S_new = max(0, min(1, S_new));
+
+% 2. Konwersja powrotna HSL -> RGB (używając H, L oraz S_new)
+
+% A. Obliczenie Chroma z nowym nasyceniem
+Chroma = (1 - abs(2 * L - 1)) .* S_new;
+
+% B. Obliczenie X (zależy od H - bez zmian)
+H_norm = H / 60;
+X = Chroma .* (1 - abs(mod(H_norm, 2) - 1));
+
+% C. Wyznaczanie R', G', B' (zależy od H)
+R_prim = zeros(size(S_new));
+G_prim = zeros(size(S_new));
+B_prim = zeros(size(S_new));
+
+% 0 <= H < 60
+mask = (H >= 0) & (H <= 60);
+R_prim(mask) = Chroma(mask);
+G_prim(mask) = X(mask);
+
+% 60 <= H < 120
+mask = (H > 60) & (H <= 120);
+R_prim(mask) = X(mask);
+G_prim(mask) = Chroma(mask);
+
+% 120 <= H < 180
+mask = (H > 120) & (H <= 180);
+G_prim(mask) = Chroma(mask);
+B_prim(mask) = X(mask);
+
+% 180 <= H < 240
+mask = (H > 180) & (H <= 240);
+G_prim(mask) = X(mask);
+B_prim(mask) = Chroma(mask);
+
+% 240 <= H < 300
+mask = (H > 240) & (H <= 300);
+R_prim(mask) = X(mask);
+B_prim(mask) = Chroma(mask);
+
+% 300 <= H < 360
+mask = (H > 300) & (H <= 360);
+R_prim(mask) = Chroma(mask);
+B_prim(mask) = X(mask);
+
+% D. Dopasowanie jasności (MinRGB)
+m = L - Chroma / 2;
+
+R_final = R_prim + m;
+G_final = G_prim + m;
+B_final = B_prim + m;
+
+% Złożenie obrazu
+img_sat_gamma = zeros(size(img_d));
+img_sat_gamma(:,:,1) = R_final;
+img_sat_gamma(:,:,2) = G_final;
+img_sat_gamma(:,:,3) = B_final;
+
+% 3. Wyświetlenie wyników
+figure('Name', 'Zadanie 4: Saturation Gamma 1.5');
+
+subplot(1,2,1);
+imshow(img_d);
+title('org');
+
+subplot(1,2,2);
+% Funkcja przycinająca dla bezpieczeństwa wyświetlania
+przytnij = @(x) max(0, min(1, x));
+imshow(przytnij(img_sat_gamma));
+title('Saturation gamma 1.5');
+
+% --- ZADANIE 5: Gamma 0.7 na jasności (Lightness) ---
+
+% 1. Modyfikacja składnika Lightness
+% "zmniejszyć jasność filtrem gamma 0,7"
+gamma = 0.7;
+L_new = L .^ (1/gamma);
+
+% Zabezpieczenie zakresu [0, 1]
+L_new = max(0, min(1, L_new));
+
+% 2. Konwersja powrotna HSL -> RGB (używając H, S oraz L_new)
+
+% A. Obliczenie Chroma z nową jasnością
+% Uwaga: Chroma zależy od L, więc musimy ją przeliczyć!
+Chroma = (1 - abs(2 * L_new - 1)) .* S;
+
+% B. Obliczenie X (zależy od Chroma, która się zmieniła)
+H_norm = H / 60;
+X = Chroma .* (1 - abs(mod(H_norm, 2) - 1));
+
+% C. Wyznaczanie R', G', B' (zależy od H - bez zmian)
+R_prim = zeros(size(L_new));
+G_prim = zeros(size(L_new));
+B_prim = zeros(size(L_new));
+
+% Wykorzystujemy te same maski co wcześniej (H się nie zmieniło)
+% 0 <= H < 60
+mask = (H >= 0) & (H <= 60);
+R_prim(mask) = Chroma(mask);
+G_prim(mask) = X(mask);
+
+% 60 <= H < 120
+mask = (H > 60) & (H <= 120);
+R_prim(mask) = X(mask);
+G_prim(mask) = Chroma(mask);
+
+% 120 <= H < 180
+mask = (H > 120) & (H <= 180);
+G_prim(mask) = Chroma(mask);
+B_prim(mask) = X(mask);
+
+% 180 <= H < 240
+mask = (H > 180) & (H <= 240);
+G_prim(mask) = X(mask);
+B_prim(mask) = Chroma(mask);
+
+% 240 <= H < 300
+mask = (H > 240) & (H <= 300);
+R_prim(mask) = X(mask);
+B_prim(mask) = Chroma(mask);
+
+% 300 <= H < 360
+mask = (H > 300) & (H <= 360);
+R_prim(mask) = Chroma(mask);
+B_prim(mask) = X(mask);
+
+% D. Dopasowanie jasności (MinRGB)
+% Tutaj używamy L_new!
+m = L_new - Chroma / 2;
+
+R_final = R_prim + m;
+G_final = G_prim + m;
+B_final = B_prim + m;
+
+% Złożenie obrazu
+img_light_gamma = zeros(size(img_d));
+img_light_gamma(:,:,1) = R_final;
+img_light_gamma(:,:,2) = G_final;
+img_light_gamma(:,:,3) = B_final;
+
+% 3. Wyświetlenie wyników
+figure('Name', 'Zadanie 5: Lightness Gamma 0.7');
+
+subplot(1,2,1);
+imshow(img_d);
+title('org');
+
+subplot(1,2,2);
+przytnij = @(x) max(0, min(1, x));
+imshow(przytnij(img_light_gamma));
+title('Lightness gamma 0.7');
+
+% --- ZADANIE 6: Normalizacja kolorów (L=0.5, S=1 dla S>0) ---
+
+% 1. Tworzenie nowych macierzy S i L
+S_new = S;
+L_new = L;
+
+% 2. Modyfikacja warunkowa
+% "dla wszystkich pikseli o nasyceniu kolorów > 0"
+mask = S > 0;
+
+% "ustawić jasność na 0,5"
+L_new(mask) = 0.5;
+
+% "i nasycenie na 1"
+S_new(mask) = 1;
+
+% 3. Konwersja powrotna HSL -> RGB (z nowymi S i L)
+
+% A. Obliczenie Chroma (zmienily się S i L)
+Chroma = (1 - abs(2 * L_new - 1)) .* S_new;
+
+% B. Obliczenie X (zmienila się Chroma)
+H_norm = H / 60;
+X = Chroma .* (1 - abs(mod(H_norm, 2) - 1));
+
+% C. Wyznaczanie R', G', B' (H bez zmian)
+R_prim = zeros(size(S_new));
+G_prim = zeros(size(S_new));
+B_prim = zeros(size(S_new));
+
+% 0 <= H < 60
+mask_h = (H >= 0) & (H <= 60);
+R_prim(mask_h) = Chroma(mask_h);
+G_prim(mask_h) = X(mask_h);
+
+% 60 <= H < 120
+mask_h = (H > 60) & (H <= 120);
+R_prim(mask_h) = X(mask_h);
+G_prim(mask_h) = Chroma(mask_h);
+
+% 120 <= H < 180
+mask_h = (H > 120) & (H <= 180);
+G_prim(mask_h) = Chroma(mask_h);
+B_prim(mask_h) = X(mask_h);
+
+% 180 <= H < 240
+mask_h = (H > 180) & (H <= 240);
+G_prim(mask_h) = X(mask_h);
+B_prim(mask_h) = Chroma(mask_h);
+
+% 240 <= H < 300
+mask_h = (H > 240) & (H <= 300);
+R_prim(mask_h) = X(mask_h);
+B_prim(mask_h) = Chroma(mask_h);
+
+% 300 <= H < 360
+mask_h = (H > 300) & (H <= 360);
+R_prim(mask_h) = Chroma(mask_h);
+B_prim(mask_h) = X(mask_h);
+
+% D. Dopasowanie jasności (MinRGB)
+m = L_new - Chroma / 2;
+
+R_final = R_prim + m;
+G_final = G_prim + m;
+B_final = B_prim + m;
+
+% Złożenie obrazu
+img_normalized = zeros(size(img_d));
+img_normalized(:,:,1) = R_final;
+img_normalized(:,:,2) = G_final;
+img_normalized(:,:,3) = B_final;
+
+% 4. Wyświetlenie wyników
+figure('Name', 'Zadanie 6: L=0.5, S=1');
+
+subplot(1,2,1);
+imshow(img_d);
+title('org');
+
+subplot(1,2,2);
+przytnij = @(x) max(0, min(1, x));
+imshow(przytnij(img_normalized));
+title('Jesli Sat.>0, L=0.5 i S=1');
