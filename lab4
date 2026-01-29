@@ -77,12 +77,190 @@ subplot(2,2,4);
 imshow(uint8(img_v2));
 title('porownanie v.2 * 3');
 
+%zad3 składowe Y'CbCr
+
+R = img_d(:,:,1);
+G = img_d(:,:,2);
+B = img_d(:,:,3);
+
+%Obliczenia składowych Y'CbCr (wzory z pdf)
+Y = 0 + 0.299 * R + 0.587 * G + 0.114*B;
+Cb = 128 - 0.168736 * R - 0.331264 * G + 0.5 * B;
+Cr = 128 + 0.5 * R - 0.418688 * G - 0.081312 * B;
+
+%przytnij = @(x) max(0, min(255,x)); funkcja przyciecia zakresu juz napisana wyzej
+
+Y = przytnij(Y);
+Cb = przytnij(Cb);
+Cr = przytnij(Cr);
+
+figure;
+subplot(2,2,1);imshow(uint8(img_d));title('Org RGB');
+subplot(2,2,2);imshow(uint8(Y));title('Y');
+subplot(2,2,3);imshow(uint8(Cb));title('Cb');
+subplot(2,2,4);imshow(uint8(Cr));title('Cr');
 
 
 
+%zad 4 konwersja obrazka na Y'CbCr i powrot do RGB
+
+R_nowe = Y + 1.402 * (Cr - 128);
+G_nowe = Y - 0.344136 * (Cb - 128) - 0.714135 * (Cr - 128);
+B_nowe = Y + 1.772 * (Cb - 128);
+
+img_nowy = zeros(size(img_d));
+img_nowy(:,:,1) = R_nowe;
+img_nowy(:,:,2) = G_nowe;
+img_nowy(:,:,3) = B_nowe;
+
+roznica = img_nowy - img_d;
+max_err = max(abs(roznica(:)));
+if max_err < 0.0001
+  disp('Bład jest mniejszy niz 0.0001');
+else
+  disp('Błąd jest za duży');
+end
+
+mnoznik = 1000000;
+
+%porownanie v.PS
+comp_vps = przytnij(mnoznik * abs(roznica));
+
+%porownanie v2
+comp_v2 = przytnij(mnoznik  * roznica + 127.5);
+
+figure;
+subplot(2,2,1);imshow(uint8(img_d));title('Oryginal');
+subplot(2,2,2);imshow(uint8(img_nowy));title('Po konwersji RGB->YCBCR->RGB');
+subplot(2,2,3);imshow(uint8(comp_vps));title('Roznica v.PS * 1000000');
+subplot(2,2,4);imshow(uint8(comp_v2));title('Roznica v.2 * 1000000');
 
 
+%zad 5
+
+Y = round(Y); %zaokraglenie ycbcr
+Cb = round(Cb);
+Cr = round(Cr);
+
+R_nowe = Y + 1.402 * (Cr - 128);
+G_nowe = Y - 0.344136 * (Cb - 128) - 0.714135 * (Cr - 128);
+B_nowe = Y + 1.772 * (Cb - 128);
+
+R_nowe = round(R_nowe); %zaokraglenie rgb
+G_nowe = round(G_nowe);
+B_nowe = round(B_nowe);
+
+%zlozenie obrazu
+img_nowy = zeros(size(img_d));
+img_nowy(:,:,1) = R_nowe;
+img_nowy(:,:,2) = G_nowe;
+img_nowy(:,:,3) = B_nowe;
+
+roznica = img_nowy - img_d;
+max_err = max(abs(roznica(:)));
+
+if max_err == 1 %test ile wynosi blad po zaokragleniu
+    disp('TEST ZALICZONY: Maksymalna roznica wynosi 1.');
+else
+    disp(['TEST NIEZALICZONY: Roznica wynosi ' num2str(max_err) ' (oczekiwano 1).']);
+end
+
+mnoznik_ps = 250; %porownanie vps z mnoznikiem 250
+img_vPS = przytnij(mnoznik_ps * abs(roznica));
+
+mnoznik_v2 = 300; %porownanie v2 z mnoznikiem 300
+wartoscSrodkowa = 127.5;
+img_v2 = przytnij(mnoznik_v2 * roznica + wartoscSrodkowa);
+
+figure;
+subplot(2,2,1);imshow(uint8(img_d));title('RGB org');
+subplot(2,2,2);imshow(uint8(img_nowy));title('-> YCbCr -> RGB (zaokraglane)');
+subplot(2,2,3);imshow(uint8 (img_vPS));title('porownanie v.PS * 250');
+subplot(2,2,4);imshow(uint8 (img_v2));title('porownanie v.2 * 300');
 
 
+%zad 6
+%Obrazek pierwszy: Gamma 1.5 na całym RGB
+gamma = 1.5;
+img_gamma_norm = (img_d / 255) .^ (1/gamma);
+img_gamma_rgb = img_gamma_norm * 255;
+
+% 2. Obrazek drugi: Gamma 1.5 tylko na Y
+Y = 0 + 0.299 * R + 0.587 * G + 0.114 * B;
+Cb = 128 - 0.168736 * R - 0.331264 * G + 0.5 * B;
+Cr = 128 + 0.5 * R - 0.418688 * G - 0.081312 * B;
+
+% Obróbka tylko składowej Y filtrem gamma 1.5
+Y_gamma_norm = (Y / 255) .^ (1/gamma);
+Y_gamma = Y_gamma_norm * 255;
+
+% Zamiana z powrotem na RGB (używamy Y_gamma oraz starych Cb i Cr)
+% Wzory z Zad 4
+R_y = Y_gamma + 1.402 * (Cr - 128);
+G_y = Y_gamma - 0.344136 * (Cb - 128) - 0.714136 * (Cr - 128);
+B_y = Y_gamma + 1.772 * (Cb - 128);
+
+img_y_gamma = zeros(size(img_d));
+img_y_gamma(:,:,1) = R_y;
+img_y_gamma(:,:,2) = G_y;
+img_y_gamma(:,:,3) = B_y;
+
+% Porównanie obu obrazków
+roznica = img_y_gamma - img_gamma_rgb;
+
+% Porównanie v.PS z mnożnikiem 50
+mnoznik_ps = 50;
+img_vPS = przytnij(mnoznik_ps * abs(roznica));
+
+% Porównanie v.2 z mnożnikiem 50
+mnoznik_v2 = 50;
+wartoscSrodkowa = 127.5;
+img_v2 = przytnij(mnoznik_v2 * roznica + wartoscSrodkowa);
+
+figure;
+subplot(2,2,1); imshow(uint8(img_gamma_rgb)); title('RGB gamma 1.5');
+subplot(2,2,2); imshow(uint8(img_y_gamma)); title('YCbCr, Y gamma 1.5, RGB');
+subplot(2,2,3); imshow(uint8(img_vPS)); title('porownanie v.PS * 50');
+subplot(2,2,4); imshow(uint8(img_v2)); title('porownanie v.2 * 50');
 
 
+% --- ZADANIE 7 ---
+% Cel: Zwiększenie nasycenia kolorów (Cb, Cr) o 1.5x
+
+% Obliczamy YCbCr od nowa dla oryginału (żeby nie brać tych po gammie)
+Y = 0 + 0.299 * R + 0.587 * G + 0.114 * B;
+Cb = 128 - 0.168736 * R - 0.331264 * G + 0.5 * B;
+Cr = 128 + 0.5 * R - 0.418688 * G - 0.081312 * B;
+
+% Zwiększenie nasycenia
+% Wzór: 128 + (wartosc - 128) * Podbicie
+podbicie = 1.5;
+Cb_new = 128 + (Cb - 128) * podbicie;
+Cr_new = 128 + (Cr - 128) * podbicie;
+
+% Powrót do RGB (z nowymi Cb i Cr, Y bez zmian)
+R_sat = Y + 1.402 * (Cr_new - 128);
+G_sat = Y - 0.344136 * (Cb_new - 128) - 0.714136 * (Cr_new - 128);
+B_sat = Y + 1.772 * (Cb_new - 128);
+
+img_sat = zeros(size(img_d));
+img_sat(:,:,1) = R_sat;
+img_sat(:,:,2) = G_sat;
+img_sat(:,:,3) = B_sat;
+
+% Porównanie obrazka nasyconego z oryginałem
+roznica = img_sat - img_d;
+
+% Porównanie v.PS z mnożnikiem 10
+mnoznik_ps = 10;
+img_vPS = przytnij(mnoznik_ps * abs(roznica));
+
+% Porównanie v.2 z mnożnikiem 10
+mnoznik_v2 = 10;
+img_v2 = przytnij(mnoznik_v2 * roznica + wartoscSrodkowa);
+
+figure;
+subplot(2,2,1); imshow(uint8(img_d)); title('org');
+subplot(2,2,2); imshow(uint8(img_sat)); title('YCbCr, kolory * 1.5, RGB');
+subplot(2,2,3); imshow(uint8(img_vPS)); title('porownanie v.PS * 10');
+subplot(2,2,4); imshow(uint8(img_v2)); title('porownanie v.2 * 10');
