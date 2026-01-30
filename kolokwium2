@@ -1,0 +1,89 @@
+clear; clc; close all;
+%zad1
+function out_img = skaluj_najblizszy_sasiad(img,s_wy, w_wy)
+  [w_we, s_we, channels] = size(img);
+
+  if s_wy < 2 || w_wy < 2 || s_we < 2 || w_we < 2
+    out_img = imresize(img, [w_wy, s_wy], 'nearest');
+    return;
+  endif
+
+  vec_x_wy = 1:s_wy;
+  vec_y_wy = 1:w_wy;
+
+  scale_x = (s_we - 1) / (s_wy - 1);
+  scale_y = (w_we - 1) / (w_wy - 1);
+
+  indices_x = round(1 + (vec_x_wy - 1) * scale_x);
+  indices_y = round(1 + (vec_y_wy - 1) * scale_y);
+
+  out_img = img(indices_y, indices_x, :);
+endfunction
+
+img = [11 12 13; 22 23 24; 31 32 33];
+
+display('Zad 1 najblizszy sasiad:');
+display(skaluj_najblizszy_sasiad(img,4,3));
+
+
+%zad2
+kat_rad = deg2rad(45);
+px = 10; %wspolrzedna x punktu obrotu
+py = 20; %wspolrzedna y punktu obrotu
+shift_x = 100; %dodatkowe przesuniecie x
+
+%przesuwamy o wektor odwrotny do punktu obrotu(-10, -20)
+T1 = [1, 0, -px;
+      0, 1, -py;
+      0, 0, 1];
+
+%macierz obroru R - przeciwnie do wskazowek zegara
+c = cos(kat_rad);
+s = sin(kat_rad);
+R = [c, -s, 0;
+     s, c, 0;
+     0, 0, 1];
+
+%przesuwamy z powrotem (+10, +10) oraz dodajemy 100 do x
+tx_final = px + shift_x;
+ty_final = py;
+
+T_final = [1, 0, tx_final;
+           0, 1, ty_final;
+           0, 0, 1];
+
+%Obliczenie moc- mnozenie od lewej do prawej
+MOC = T_final * R* T1;
+
+display('zad 2 macierz obróbki całkowitej MOC:');
+display(MOC);
+
+
+%zad3
+%wczytanie danych z pliku(x to kolumna 1, y to kolumna 2)
+dane = csvread('punktman.csv');
+x = dane(:, 1);
+y = dane(:, 2);
+
+n = length(x); %liczba punktow
+
+
+P = [x';y';ones(1,n)]; %stworzenie wektora punktów w postaci jednorodnej [x; y; 1]
+
+MOC = [1 10 0; 0 100 0; 0 0 1];
+
+%wykonanie przeksztalcenia (mnozenie macierzy przez punkty)
+P_nowe = MOC * P;
+
+%wyciągniecie nowych wspolrzednych x (pierwszy wiersz)
+x_nowe = P_nowe(1, :);
+
+%znalezienie i wyswietlenie maksymalnej wartosci x
+max_x = max(x_nowe);
+
+display('zad 3 maksymalna wartosc x:');
+display(max_x);
+
+
+
+
