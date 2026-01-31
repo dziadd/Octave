@@ -1,0 +1,31 @@
+clear;clc;close all;
+function [Rn, Gn, Bn] = kon(R,G,B);
+  K = R - B;
+  temp = B + 0.5 * K;
+  L = G - temp;
+  M = temp + 0.5 * L;
+
+  Kn = K;
+  [wys,sz] = size(Kn);
+  polowa = round(wys/2);
+  Kn(polowa:end,:) = 0;
+
+  temp = M - 0.5 * L;
+  G = L + temp;
+  B = temp - 0.5 * Kn;
+  R = B + Kn;
+
+  Rn = R;
+  Gn = G;
+  Bn = B;
+endfunction
+
+img = double(imread('rzeczka.jpg'));
+[rn,gn,bn] = kon(img(:,:,1), img(:,:,2), img(:,:,3));
+img_out(:,:,1) = rn;
+img_out(:,:,2) = gn;
+img_out(:,:,3) = bn;
+
+imshow(uint8(img_out));
+
+
