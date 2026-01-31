@@ -1,0 +1,42 @@
+%Zadanie 4. Proszę stworzyć LUT, taką, aby dla wszystkich wartości wejściowych mniejszych niż średnia wartość z całego obrazka zmienić je na
+%10, a wartości większe niż średnia płynnie zmieniały się one aż do 235 (zgodnie z podanym przykładem).
+%Tabela (wektor nietransponowany - poziomy) LUT ma być w formacie wyjście = LUT[wejście+1] (takie jak na ćwiczeniach)
+%i zmienna ta ma się dokładnie nazywać LUT.
+
+clc;clear;close all;
+
+img = double(imread('rzeczka.jpg'));
+srednia = mean(img(:));
+wejscie = 0:255;
+LUT = zeros(1,256);
+
+LUT(wejscie <= srednia) = 10;
+indeksy_wieksze = wejscie > srednia;
+procent_zakresu = (wejscie(indeksy_wieksze) - srednia) / (255 - srednia);
+LUT(indeksy_wieksze) = 10 + procent_zakresu * (235 - 10);
+
+obraz_koncowy = LUT(uint8(img) + 1);
+figure;
+imshow(uint8(obraz_koncowy));
+
+%Proszę stworzyć LUT taką, aby dla wartości wejściowych od 0 do 50 dawała wyjście 30, dla wartości wejściowej od 50 do 255 dawała
+%wyjście płynnie zmieniające się od 30 do zaokrąglonej średniej wartości pobranej z obrazka. Tabela (wektor nietransponowany - poziomy)
+%LUT ma być w formacie wyjście = LUT[wejście+1] (taki jak na ćwiczeniach) i zmienna ta ma się dokładnie nazywać LUT.
+
+img2 = double(imread('rzeczka.jpg'));
+wejscie = 0:255
+prog = 50;
+srednia = mean(img2(:));
+LUT = zeros(1,256);
+LUT(wejscie <= prog) = 30;
+indeksy_wieksze = wejscie > prog;
+procent_zakresu = (wejscie(indeksy_wieksze) - prog) / (255 - prog);
+LUT(indeksy_wieksze) = 30 + procent_zakresu * (srednia - 30);
+obraz_final = LUT(uint8(img2) + 1);
+figure;
+imshow(uint8(obraz_final));
+
+%Start + Procent * (Koniec - Start)
+
+
+
