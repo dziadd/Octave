@@ -21,4 +21,4 @@ b_vec = img(:,:,3);
 [rn,gn,bn] = kon(r_vec(:), g_vec(:), b_vec(:));
 img_wynik = reshape([rn;gn;bn], size(img));
 figure;imshow(uint8(img)); title('org');
-figure;imshow(uint8(img_wynik));title('lut');
+figure;imshow(uint8(img_wynik));title('klm');
