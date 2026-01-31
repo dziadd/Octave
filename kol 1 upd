@@ -1,0 +1,60 @@
+%kol 1 zad 1 i 2 LUT
+
+clc;clear;close all;
+img = double(imread('rzeczka.jpg'));
+
+srednia = mean(img(:));
+
+display(srednia);
+wejscie = 0:255;
+LUT = zeros(1,256);
+
+LUT(wejscie <= srednia) = 10;
+
+indeksy_wieksze = wejscie > srednia;
+procent_zakresu = (wejscie(indeksy_wieksze) - srednia) / (255 - srednia);
+LUT(indeksy_wieksze) = 10 + procent_zakresu * (235 - 10);
+
+obraz_koncowy = LUT(uint8(img) + 1);
+figure;
+imshow(uint8(img));title('Oryginalny');
+figure;
+imshow(uint8(obraz_koncowy));title('LUT');
+
+%ZAD2 konwersja rgb na klm
+function[Rn, Gn, Bn] = kon(R, G, B);
+K = 0.25 * R + 0.5 * G + 0.25 * B;
+L = 0.5 * R - 0.5 * B;
+M = -0.25 * R + 0.5 * G - 0.25 * B;
+
+Kn = K;
+indeksy = L > 128;
+Kn(indeksy) = 103 + 0.2 * K(indeksy);
+Rn = Kn + L - M;
+Gn = Kn + M;
+Bn = Kn - L - M;
+endfunction
+
+
+clear;
+
+img = double(imread('rzeczka.jpg'));
+R = img(:,:,1);
+G = img(:,:,2);
+B = img(:,:,3);
+
+[rn, gn, bn] = kon(R,G,B);
+img_wynik = zeros(size(img));
+img_wynik(:,:,1) = rn;
+img_wynik(:,:,2) = gn;
+img_wynik(:,:,3) = bn;
+
+figure;
+imshow(uint8(img_wynik)); title('konwersja rgb na klm');
+
+
+clear;
+figure;
+img = imread('rzeczka.jpg');
+img=mean(img,3);
+imshow(uint8(img));
