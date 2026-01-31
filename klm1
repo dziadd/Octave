@@ -1,0 +1,24 @@
+clear;clc;close all;
+function [Rn, Gn, Bn] = kon(R, G, B);
+K = 0.25 * R + 0.5 * G + 0.25 * B;
+L = 0.5 * R - 0.5 * B;
+M = -0.25 * R + 0.5 * G - 0.25 * B;
+
+Kn = K;
+indeksy = L > 128;
+Kn(indeksy) = 103 + 0.2 * K(indeksy);
+
+Rn = Kn + L - M;
+Gn = Kn + M;
+Bn = Kn - L - M;
+endfunction
+
+img = double(imread('rzeczka.jpg'));
+r_vec = img(:,:,1);
+g_vec = img(:,:,2);
+b_vec = img(:,:,3);
+
+[rn,gn,bn] = kon(r_vec(:), g_vec(:), b_vec(:));
+img_wynik = reshape([rn;gn;bn], size(img));
+figure;imshow(uint8(img)); title('org');
+figure;imshow(uint8(img_wynik));title('lut');
