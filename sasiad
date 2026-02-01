@@ -1,0 +1,19 @@
+clear;clc;close all;
+
+
+function img_out = sasiad(img,s_wy,w_wy);
+  [w_we,s_we] = size(img);
+  vec_x_wy = 1:s_wy;
+  vec_y_wy = 1:w_wy;
+
+  scale_x = (s_we - 1) / (s_wy - 1);
+  scale_y = (w_we - 1) / (w_wy - 1);
+
+  ind_x = round(1 + (vec_x_wy - 1) * scale_x);
+  ind_y = round(1 + (vec_y_wy - 1) * scale_y);
+  img_out = img(ind_y,ind_x,:);
+
+endfunction
+
+we = [11 12 13; 22 23 24; 31 32 33];
+display(sasiad(we,4,3));
